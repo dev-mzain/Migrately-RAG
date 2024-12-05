@@ -1,0 +1,11 @@
+fastapi
+uvicorn
+pydantic
+openai==0.28
+pinecone-client
+pymongo
+numpy
+requests
+python-dotenv
+pdfkit
+python-multipart
