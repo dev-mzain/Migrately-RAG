@@ -44,8 +44,12 @@ async def summarize_and_categorize_document(document_text: str):
             summary_start = result.index("Summary:") + len("Summary:")
             category_start = result.index("Category:") + len("Category:")
 
+            # Extract summary text without the category part
             summary = result[summary_start:category_start].strip()
+
+            # Extract the category text
             category = result[category_start:].strip()
+
 
         except ValueError:
             # Return default error values if parsing fails
@@ -53,7 +57,7 @@ async def summarize_and_categorize_document(document_text: str):
             category = "Error: Unable to categorize."
 
         # Always return a tuple (summary, category)
-        return summary, category
+        return summary[:-13], category
 
     except Exception as e:
         # Handle any other exceptions and ensure two values are returned
@@ -65,21 +69,32 @@ async def prepare_case():
     """
     Prepare a case statement for O-1 visa qualification based on all document summaries.
     """
-    summaries = get_all_summaries()
+    try:
+        # Get all document summaries
+        summaries = get_all_summaries()
 
-    # Prompt GPT to analyze all summaries and prepare a case statement
-    prompt = f"Based on the following document summaries, prepare a case statement on how well the client qualifies for an O-1 visa:\n\n{summaries}"
+        # Prompt GPT to analyze all summaries and prepare a case statement
+        prompt = f"Based on the following document summaries, prepare a case statement on how well the client qualifies for an O-1 visa:\n\n{summaries}"
 
-    response = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
-        messages=[
-            {"role": "system", "content": "You are a helpful assistant."},
-            {"role": "user", "content": prompt}
-        ],
-        max_tokens=500
-    )
+        # Request to OpenAI to generate the case statement
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "user", "content": prompt}
+            ],
+            max_tokens=500
+        )
 
-    case_statement = response.choices[0].message['content'].strip()
-    store_case_statement(case_statement)
+        # Extract the case statement from the response
+        case_statement = response.choices[0].message['content'].strip()
 
-    return case_statement
+        # Store the case statement in the database
+        store_case_statement(case_statement)
+
+        return case_statement
+
+    except Exception as e:
+        # Catch any other general exceptions
+        print(f"An error occurred: {e}")
+        return "Error: Failed to generate case statement due to an unknown issue."
