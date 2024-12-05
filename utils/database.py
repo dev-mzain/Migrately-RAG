@@ -1,17 +1,15 @@
 from pymongo import MongoClient
+from datetime import datetime
 from config import variables
 
+# MongoDB connection
 client = MongoClient(variables.DATABASE_URL)
-
 db = client.o1_visa_db
 metadata_collection = db.metadata
-summaries_collection = db.summaries
+cases_collection = db.cases
 
 def store_metadata(metadata: dict):
     metadata_collection.insert_one(metadata)
-
-def store_summary(document_id: str, summary: str):
-    summaries_collection.insert_one({"_id": document_id}, {"$set": {"summary": summary}}, upsert=True)
 
 
 def get_all_summaries():
@@ -45,3 +43,23 @@ def get_all_summaries():
 
     return categorized_summaries
 
+
+def store_case_statement(case_statement: str):
+    """
+    Store the case statement with a timestamp in the database.
+    """
+    case_document = {
+        "case_statement": case_statement,
+        "created_at": datetime.utcnow()
+    }
+    cases_collection.insert_one(case_document)
+
+
+def get_latest_case_statement():
+    """
+    Retrieve the latest case statement based on the timestamp.
+    """
+    latest_case = cases_collection.find_one(sort=[("created_at", -1)])
+    if latest_case:
+        return latest_case["case_statement"]
+    return None

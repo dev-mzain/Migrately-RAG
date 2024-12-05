@@ -1,5 +1,5 @@
 import openai
-from utils.database import  get_all_summaries
+from utils.database import get_all_summaries, store_case_statement
 from config import variables
 
 
@@ -80,5 +80,6 @@ async def prepare_case():
     )
 
     case_statement = response.choices[0].message['content'].strip()
+    store_case_statement(case_statement)
 
     return case_statement
