@@ -7,6 +7,7 @@ from services.storage import upload_to_fileio, text_to_pdf
 from utils.database import store_metadata, get_all_summaries, get_latest_case_statement
 from utils.vector_db import summarize_document
 import logging
+import fitz
 
 # Initialize FastAPI app
 app = FastAPI()
@@ -95,9 +96,16 @@ async def download_latest_case():
 # Helper function to handle document processing
 async def process_document(file: UploadFile, description: str) -> dict:
     try:
-        # Read file content and decode to string
+        # Read file content
         content = await file.read()
-        document_text = content.decode('utf-8')
+
+        # Check if file is a PDF
+        if file.content_type == 'application/pdf':
+            # Extract text from PDF using PyMuPDF (fitz)
+            document_text = extract_text_from_pdf(content)
+        else:
+            # If it's not a PDF, assume it's a text file and decode
+            document_text = content.decode('utf-8')
 
         metadata = {
             "description": description,
@@ -129,3 +137,16 @@ async def process_document(file: UploadFile, description: str) -> dict:
     except Exception as e:
         logger.error(f"Error processing document {file.filename}: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to process document {file.filename}.")
+
+# Function to extract text from a PDF
+def extract_text_from_pdf(pdf_content: bytes) -> str:
+    try:
+        doc = fitz.open(stream=pdf_content, filetype="pdf")
+        document_text = ""
+        for page_num in range(doc.page_count):
+            page = doc.load_page(page_num)
+            document_text += page.get_text()
+        return document_text
+    except Exception as e:
+        logger.error(f"Error extracting text from PDF: {e}")
+        raise HTTPException(status_code=500, detail="Failed to extract text from PDF.")
